@@ -1,0 +1,5 @@
+(sym_lib_table
+  (lib (name dmcginnis427)(type Legacy)(uri ${KIPRJMOD}/Library/dmcginnis427Symbols/dmcginnis427.lib)(options "")(descr ""))
+  (lib (name teensy)(type Legacy)(uri ${KIPRJMOD}/Library/Teensy/symbols/teensy.lib)(options "")(descr ""))
+  (lib (name blinky-lite-basic-rescue)(type Legacy)(uri ${KIPRJMOD}/blinky-lite-basic-rescue.lib)(options "")(descr ""))
+)
