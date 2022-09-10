@@ -1,5 +1,5 @@
 # Blinky IVT Cube
-The Blinky-IVT cube controls an infrared diode to send pulses to an IVT heat pump. The pulse sequence is defined in the IVT.h file in the cubeCode folder. The pulse sequence was modified from [ToniA/arduino-heatpumpir](https://github.com/ToniA/arduino-heatpumpir). The microcontroller is a [Teensy LC](https://www.pjrc.com/teensy/teensyLC.html) and the cube code follows closely the [Blinky Bus Cube](https://github.com/Blinky-Lite-Exchange/blinky-bus-cube) project.
+The Blinky-IVT cube controls an infrared diode to send pulses to an IVT heat pump. The pulse sequence is defined in the IVT.h file in the cubeCode folder. The pulse sequence was modified from [ToniA/arduino-heatpumpir](https://github.com/ToniA/arduino-heatpumpir). The [ToniA/arduino-heatpumpir](https://github.com/ToniA/arduino-heatpumpir) project contains pulse sequences for 29 different models of heat pumps so it possible to easily extend the Blinky IVT cube to many differnet models of heat pumps. The The microcontroller is a [Teensy LC](https://www.pjrc.com/teensy/teensyLC.html) and the cube code follows closely the [Blinky Bus Cube](https://github.com/Blinky-Lite-Exchange/blinky-bus-cube) project.
 
 The Blinky IVT Cube sends and receives data from the [Blinky IVT tray](https://github.com/blinky-lite-energy-exchange/blinky-ivt-tray).
 
