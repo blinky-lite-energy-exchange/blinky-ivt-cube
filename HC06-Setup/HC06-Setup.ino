@@ -1,6 +1,6 @@
 
 String at = "AT";
-String deviceName = "AT+NAMEIV01";
+String deviceName = "AT+NAMEIV02";
 String password = "AT+PIN5822";
 String baudRate = "AT+BAUD5";
 // Command Reference
