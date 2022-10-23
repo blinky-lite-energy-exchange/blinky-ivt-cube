@@ -155,7 +155,7 @@ void blinkyBusLoop()
         g_commLEDState = 1;
         digitalWrite(g_commLEDPin, g_commLEDState);
         blinkyBus.watchdog = blinkyBus.watchdog + 1;
-        if (blinkyBus.watchdog > 32760) blinkyBus.watchdog = 0 ;
+        if (blinkyBus.watchdog > 32760) blinkyBus.watchdog = 0;
         g_mqttClient.publish(mqttPublishTopic, (uint8_t*)blinkyBus.buffer, BLINKYMQTTBUSBUFSIZE * 2);
       }
     }
@@ -166,7 +166,7 @@ void blinkyBusLoop()
         digitalWrite(g_commLEDPin, g_commLEDState);
         g_publishNow = false;
         blinkyBus.watchdog = blinkyBus.watchdog + 1;
-        if (blinkyBus.watchdog > 32760) blinkyBus.watchdog = 32760 ;
+        if (blinkyBus.watchdog > 32760) blinkyBus.watchdog = 0;
         g_mqttClient.publish(mqttPublishTopic, (uint8_t*)blinkyBus.buffer, BLINKYMQTTBUSBUFSIZE * 2);
     }
   }
