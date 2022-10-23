@@ -194,7 +194,7 @@ void IVTHeatPump::sendIVT(uint8_t powerMode, uint8_t operatingMode, uint8_t fanS
   checksum &= 0x0F;
 
   SharpTemplate[12] |= (checksum << 4);
-  Serial.println(SharpTemplate[12]);
+//  Serial.println(SharpTemplate[12]);
 
   
   for (int ii = 0; ii < 8; ++ii) writePulse(true);
