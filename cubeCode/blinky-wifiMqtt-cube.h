@@ -5,7 +5,7 @@ WiFiClient g_wifiClient;
 PubSubClient g_mqttClient(g_wifiClient);
 unsigned long g_lastMsgTime = 0;
 int g_wifiStatus = 0;
-unsigned long g_wifiTimeout = 15000;
+unsigned long g_wifiTimeout = 20000;
 unsigned long g_wifiRetry = 30000;
 unsigned long g_wifiLastTry = 0;
 int g_publishInterval  = 2000;
