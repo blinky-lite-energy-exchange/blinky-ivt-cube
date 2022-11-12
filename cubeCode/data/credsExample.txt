@@ -1,0 +1,8 @@
+{yourSsid}
+{yourSsidPassword}
+{your.mqttbroker.com}
+{yourMqttUserName}
+{yourMqttPassword}
+{blinky-mqtt-led/01/reading}
+{blinky-mqtt-led/01/setting}
+

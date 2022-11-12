@@ -1,84 +1,64 @@
+#include "BlinkyMqttCube.h"
 #include "IVT.h"
-#include "wifiCredentials.h"
 
-#define BLINKYMQTTBUSBUFSIZE  9
-union BlinkyBusUnion
+struct
 {
-  struct
-  {
-    int16_t state;
-    int16_t watchdog;
-    int16_t chipTemp;
-    int16_t power;
-    int16_t mode;
-    int16_t fan;
-    int16_t temperature;
-    int16_t hour;
-    int16_t min;
-  };
-  int16_t buffer[BLINKYMQTTBUSBUFSIZE];
-} blinkyBus;
+  int16_t state;
+  int16_t watchdog;
+  int16_t chipTemp;
+  int16_t power;
+  int16_t mode;
+  int16_t fan;
+  int16_t temperature;
+  int16_t hour;
+  int16_t min;
+} cubeData;
+
 void subscribeCallback(uint8_t address, int16_t value)
 {
   if (address == 8) setHeatPump();
 }
 
-#include "blinky-wifiMqtt-cube.h"
-int wirelessConnectedPin = 6;
-unsigned long tnow;
-unsigned long lastWirelessBlink;
-boolean wirelessLed = false;
+int cubeAlivePin = 6;
 IVTHeatPump ivtHeatPump = IVTHeatPump();
 
 
 void setup() 
 {
-  pinMode(wirelessConnectedPin, OUTPUT);
-  digitalWrite(wirelessConnectedPin, 1);
+  pinMode(cubeAlivePin, OUTPUT);
+  analogWrite(cubeAlivePin, 20);
   Serial.begin(115200);
-  delay(5000);
+  delay(1000);
   ivtHeatPump.init(22);
-  initBlinkyBus(2000,true, 7);
+  BlinkyMqttCube.setChattyCathy(false);
+  BlinkyMqttCube.init(2000,true, 7, -1, (int16_t*)& cubeData,  sizeof(cubeData), subscribeCallback);
 
-  blinkyBus.power = POWER_OFF;
-  blinkyBus.mode = MODE_HEAT;
-  blinkyBus.fan = FAN_AUTO;
-  blinkyBus.temperature = 18;
-  blinkyBus.hour = 1;
-  blinkyBus.min = 1;
+  cubeData.power = POWER_OFF;
+  cubeData.mode = MODE_HEAT;
+  cubeData.fan = FAN_AUTO;
+  cubeData.temperature = 18;
+  cubeData.hour = 1;
+  cubeData.min = 1;
   
   setHeatPump();
-  digitalWrite(wirelessConnectedPin, 1);
-  tnow = millis();
-  lastWirelessBlink = tnow;
 }
 
 void loop() 
 {
-  tnow = millis();
-  blinkyBusLoop();
-//  publishBlinkyBusNow(); 
-  if (g_wifiStatus == WL_CONNECTED)
-  {
-    wirelessLed = false;
-    digitalWrite(wirelessConnectedPin, wirelessLed);
-  }
-  else
-  {
-    if ((tnow - lastWirelessBlink) > 1000)
-    {
-      wirelessLed = !wirelessLed;
-      lastWirelessBlink = tnow;
-      digitalWrite(wirelessConnectedPin, wirelessLed);
-    }
-  }
-  blinkyBus.chipTemp = (int16_t) (analogReadTemp() * 100.0);
+  BlinkyMqttCube.loop();
+  cubeData.chipTemp = (int16_t) (analogReadTemp() * 100.0);
 }
 void setHeatPump()
 {
-  if (blinkyBus.state == 0)
+  if (cubeData.state == 0)
   {
+    analogWrite(cubeAlivePin, 0);
+    delay(500);
     Serial.println("Setting Heat Pump");
-    ivtHeatPump.setIVTMode(blinkyBus.power, blinkyBus.mode, blinkyBus.fan, blinkyBus.temperature, blinkyBus.hour, blinkyBus.min);
+    ivtHeatPump.setIVTMode(cubeData.power, cubeData.mode, cubeData.fan, cubeData.temperature, cubeData.hour, cubeData.min);
+    delay(500);
+    int ledBright = 20 + 7 * (cubeData.temperature - 18);
+    if (ledBright < 10) ledBright = 10;
+    if (cubeData.power == POWER_ON) analogWrite(cubeAlivePin, ledBright);
   }
 }
