@@ -27,11 +27,11 @@ void setup()
 {
   pinMode(cubeAlivePin, OUTPUT);
   analogWrite(cubeAlivePin, 20);
-  Serial.begin(115200);
+//  Serial.begin(115200);
   delay(1000);
   ivtHeatPump.init(22);
   BlinkyMqttCube.setChattyCathy(false);
-  BlinkyMqttCube.init(2000,true, 7, -1, (int16_t*)& cubeData,  sizeof(cubeData), subscribeCallback);
+  BlinkyMqttCube.init(2000,true, 7, 50, -1, (int16_t*)& cubeData,  sizeof(cubeData), subscribeCallback);
 
   cubeData.power = POWER_OFF;
   cubeData.mode = MODE_HEAT;
@@ -46,7 +46,7 @@ void setup()
 void loop() 
 {
   BlinkyMqttCube.loop();
-  cubeData.chipTemp = (int16_t) (analogReadTemp() * 100.0);
+  cubeData.chipTemp = (int16_t) ((analogReadTemp() - 4.5) * 100.0);
 }
 void setHeatPump()
 {
@@ -54,7 +54,7 @@ void setHeatPump()
   {
     analogWrite(cubeAlivePin, 0);
     delay(500);
-    Serial.println("Setting Heat Pump");
+//    Serial.println("Setting Heat Pump");
     ivtHeatPump.setIVTMode(cubeData.power, cubeData.mode, cubeData.fan, cubeData.temperature, cubeData.hour, cubeData.min);
     delay(500);
     int ledBright = 20 + 7 * (cubeData.temperature - 18);

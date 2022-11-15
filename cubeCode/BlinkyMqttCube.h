@@ -1,7 +1,7 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include "LittleFS.h"
-#define   COMM_LED_STATE_ON 50
+
 struct SubscribeData
 {
     uint8_t command;
@@ -27,8 +27,9 @@ class BlinkyMqttCube
     PubSubClient  g_mqttClient;
     WiFiServer*   g_wifiServer;
 
+    boolean       g_init = true;
     unsigned long g_lastMsgTime = 0;
-    unsigned long g_lastWirelessBlink;
+    unsigned long g_lastWirelessBlink = 0;
     int           g_wifiStatus = 0;
     unsigned long g_wifiTimeout = 25000;
     unsigned long g_wifiRetry = 30000;
@@ -37,7 +38,8 @@ class BlinkyMqttCube
     boolean       g_publishOnInterval = true;
     boolean       g_publishNow = false;
     int           g_commLEDPin = LED_BUILTIN;
-    int           g_commLEDState = 0;
+    int           g_commLEDBright = 255;
+    boolean       g_commLEDState = false;
     boolean       g_wifiAccessPointMode = false;
     boolean       g_webPageServed = false;
     boolean       g_webPageRead = false;
@@ -46,6 +48,7 @@ class BlinkyMqttCube
     SubscribeData g_subscribeData;
     int16_t*      g_cubeData;
     int           g_resetButtonPin = -1;
+    boolean       g_resetButtonDownState = false;
     unsigned long g_resetTimeout = 10000;
     volatile unsigned long g_resetButtonDownTime = 0;
     void          (*g_userMqttCallback)(uint8_t, int16_t);
@@ -56,12 +59,13 @@ class BlinkyMqttCube
     void          readWebPage();
     void          serveWebPage();
     String        replaceHtmlEscapeChar(String inString);
+    void          setCommLEDPin(boolean ledState);
 
   public:
     BlinkyMqttCube();
     void          publishNow();
     void          loop();
-    void          init(int publishInterval, boolean publishOnInterval, int commLEDPin, int resetButtonPin, int16_t* cubeData,  unsigned int cubeDataSize, void (*userMqttCallback)(uint8_t, int16_t));
+    void          init(int publishInterval, boolean publishOnInterval, int commLEDPin,  int commLEDBright, int resetButtonPin, int16_t* cubeData,  unsigned int cubeDataSize, void (*userMqttCallback)(uint8_t, int16_t));
     void          setChattyCathy(boolean chattyCathy);
     void          mqttCubeCallback(char* topic, byte* payload, unsigned int length);
     void          wifiApButtonHandler();
@@ -69,10 +73,53 @@ class BlinkyMqttCube
 };
 BlinkyMqttCube::BlinkyMqttCube()
 {
+
+  g_init = true;
+  g_lastMsgTime = 0;
+  g_lastWirelessBlink = 0;
+  g_wifiStatus = 0;
+  g_wifiTimeout = 20000;
+  g_wifiRetry = 20000;
+  g_wifiLastTry = 0;
+  g_publishInterval  = 2000;
+  g_publishOnInterval = true;
+  g_publishNow = false;
+  g_commLEDPin = LED_BUILTIN;
+  g_commLEDBright = 255;
+  g_commLEDState = false;
+  g_wifiAccessPointMode = false;
+  g_webPageServed = false;
+  g_webPageRead = false;
+  g_chattyCathy = false;
+  g_resetButtonPin = -1;
+  g_resetButtonDownState = false;
+  g_resetTimeout = 10000;
+  g_resetButtonDownTime = 0;
+
+}
+void BlinkyMqttCube::setCommLEDPin(boolean ledState)
+{
+  g_commLEDState = ledState;
+  if (g_commLEDPin == LED_BUILTIN)
+  {
+    digitalWrite(g_commLEDPin, g_commLEDState);
+  }
+  else
+  {
+    if (g_commLEDState)
+    {
+      analogWrite(g_commLEDPin, g_commLEDBright);
+    }
+    else
+    {
+      analogWrite(g_commLEDPin, 0);
+    }
+  }
 }
 
 void BlinkyMqttCube::loop()
 {
+  rp2040.wdt_reset();
   if (g_wifiAccessPointMode)
   {
     serveWebPage();
@@ -86,14 +133,12 @@ void BlinkyMqttCube::loop()
       {
         if ((millis() - g_resetButtonDownTime) < g_resetTimeout)
         {
-          g_commLEDState = 0;
-          analogWrite(g_commLEDPin, g_commLEDState);
+          setCommLEDPin(false);
           return;
         }
         else
         {
-          g_commLEDState = COMM_LED_STATE_ON;
-          analogWrite(g_commLEDPin, g_commLEDState);
+          setCommLEDPin(true);
           return;
         }
       }
@@ -110,19 +155,17 @@ void BlinkyMqttCube::loop()
     
       if (g_publishOnInterval)
       {
-        if (g_commLEDState > 0)
+        if (g_commLEDState)
         {
           if (now - g_lastMsgTime > 10) 
           {
-            g_commLEDState = 0;
-            analogWrite(g_commLEDPin, g_commLEDState);
+            setCommLEDPin(false);
           }
         }
         if (now - g_lastMsgTime > g_publishInterval) 
         {
           g_lastMsgTime = now;
-          g_commLEDState = COMM_LED_STATE_ON;
-          analogWrite(g_commLEDPin, g_commLEDState);
+          setCommLEDPin(true);
           g_cubeData[1] = g_cubeData[1] + 1;
           if (g_cubeData[1] > 32760) g_cubeData[1]= 0 ;
           g_mqttClient.publish(g_mqttPublishTopic.c_str(), (uint8_t*)g_cubeData, g_cubeDataSize);
@@ -131,8 +174,7 @@ void BlinkyMqttCube::loop()
       if (g_publishNow)
       {
           g_lastMsgTime = now;
-          g_commLEDState = COMM_LED_STATE_ON;
-          analogWrite(g_commLEDPin, g_commLEDState);
+          setCommLEDPin(true);
           g_publishNow = false;
           g_cubeData[1] = g_cubeData[1] + 1;
           if (g_cubeData[1] > 32760) g_cubeData[1] = 0 ;
@@ -144,16 +186,8 @@ void BlinkyMqttCube::loop()
       setup_wifi();
       if ((now - g_lastWirelessBlink) > 100)
       {
-        if(g_commLEDState == 0)
-        {
-          g_commLEDState = COMM_LED_STATE_ON;
-        }
-        else
-        {
-          g_commLEDState = 0;
-        }
+        setCommLEDPin(!g_commLEDState);
         g_lastWirelessBlink = now;
-        analogWrite(g_commLEDPin, g_commLEDState);
       }
     }
   }
@@ -163,14 +197,16 @@ void BlinkyMqttCube::publishNow()
 {
   g_publishNow = true;
 }
-void BlinkyMqttCube::init(int publishInterval, boolean publishOnInterval, int commLEDPin, int resetButtonPin, int16_t* cubeData,  unsigned int cubeDataSize, void (*userMqttCallback)(uint8_t, int16_t))
+void BlinkyMqttCube::init(int publishInterval, boolean publishOnInterval, int commLEDPin, int commLEDBright, int resetButtonPin, int16_t* cubeData,  unsigned int cubeDataSize, void (*userMqttCallback)(uint8_t, int16_t))
 {
+  g_init = true;
   g_cubeData = cubeData;
   g_cubeDataSize = cubeDataSize;
   g_userMqttCallback = userMqttCallback;
   g_wifiClient = WiFiClient();
   g_mqttClient = PubSubClient(g_wifiClient);
   g_wifiServer = new WiFiServer(80);
+  g_commLEDBright =  commLEDBright;
 
   if (g_chattyCathy) Serial.println("Reading creds.txt file");
   LittleFS.begin();
@@ -208,27 +244,29 @@ void BlinkyMqttCube::init(int publishInterval, boolean publishOnInterval, int co
   if (g_chattyCathy) Serial.println("Starting Communications");
   g_publishInterval = publishInterval;
   g_publishOnInterval = publishOnInterval;
-  setup_wifi();
   g_mqttClient.setServer(g_mqttServer.c_str(), 1883);
   g_mqttClient.setCallback(BlinkyMqttCubeCallback);
   g_cubeData[0] = 1; //init
   g_cubeData[1] = 0;
   g_commLEDPin = commLEDPin;
   pinMode(g_commLEDPin, OUTPUT);
-  analogWrite(g_commLEDPin, 0);
+  setCommLEDPin(false);
   g_resetButtonPin = resetButtonPin;
   if (g_resetButtonPin > 0 )
   { 
     attachInterrupt(digitalPinToInterrupt(g_resetButtonPin), BlinkyMqttCubeWifiApButtonHandler, CHANGE);
     pinMode(g_resetButtonPin, INPUT);
   }
+  rp2040.wdt_begin(5000);
+  g_wifiLastTry = 0;
+  setup_wifi();
+  g_init = false;
 }
 void BlinkyMqttCube::setup_wifi() 
 {
-  if ((millis() - g_wifiLastTry) < g_wifiRetry) return;
-  g_commLEDState = COMM_LED_STATE_ON;
-  analogWrite(g_commLEDPin, g_commLEDState);
-  delay(10);
+  if (((millis() - g_wifiLastTry) < g_wifiRetry) && !g_init) return;
+  setCommLEDPin(true);
+  
   if (g_chattyCathy) Serial.println();
   if (g_chattyCathy) Serial.print("Connecting to ");
   if (g_chattyCathy) Serial.println(g_ssid);
@@ -248,10 +286,12 @@ void BlinkyMqttCube::setup_wifi()
     g_wifiStatus = WiFi.status();
     delay(500);
     if (g_chattyCathy) Serial.print(".");
+    setCommLEDPin(!g_commLEDState);
+
+    rp2040.wdt_reset();
   }
   g_wifiLastTry = millis();
 
-  randomSeed(micros());
   if (g_wifiStatus == WL_CONNECTED)
   {
     if (g_chattyCathy) Serial.println("");
@@ -347,6 +387,7 @@ void BlinkyMqttCube::readWebPage()
     String header = "";
     while (client.connected() && !g_webPageRead) 
     {
+      rp2040.wdt_reset();
       if (client.available()) 
       {
         char c = client.read();
@@ -437,7 +478,8 @@ void BlinkyMqttCube::readWebPage()
       {
         if (g_chattyCathy) Serial.println("file open failed");
       }
-
+      if (g_chattyCathy) Serial.println("Rebooting");
+      delay(10000); //watchdog will kick in
     }
   }
 }
@@ -452,6 +494,7 @@ void BlinkyMqttCube::serveWebPage()
     String header = "";
     while (client.connected() && !g_webPageServed) 
     {
+      rp2040.wdt_reset();
       if (client.available()) 
       {
         char c = client.read();
@@ -558,6 +601,8 @@ String BlinkyMqttCube::replaceHtmlEscapeChar(String inString)
 }
 void BlinkyMqttCube::setupWifiAp()
 {
+  if (g_wifiAccessPointMode) return;
+  setCommLEDPin(true);
   WiFi.disconnect();
   WiFi.mode(WIFI_AP);
   WiFi.softAP(g_mqttUsername);
@@ -575,6 +620,7 @@ void BlinkyMqttCube::setupWifiAp()
 void BlinkyMqttCube::setChattyCathy(boolean chattyCathy)
 {
   g_chattyCathy = chattyCathy;
+
   return;
 }
 void BlinkyMqttCube::mqttCubeCallback(char* topic, byte* payload, unsigned int length)
@@ -604,12 +650,19 @@ void BlinkyMqttCube::wifiApButtonHandler()
 {
   if (digitalRead(g_resetButtonPin)) 
   {
-    if (g_chattyCathy) Serial.println("Button Down");
-    g_resetButtonDownTime = millis();
+    if (g_resetButtonDownState) return;
+    if ((millis() - g_resetButtonDownTime) > 50)
+    {
+      if (g_chattyCathy) Serial.println("Button Down");
+      g_resetButtonDownTime = millis();
+      g_resetButtonDownState = true;
+    }
   }
   else
   {
+    if (!g_resetButtonDownState) return;
     if (g_chattyCathy) Serial.println("Button up");
+    g_resetButtonDownState = false;
     if ((millis() - g_resetButtonDownTime) > g_resetTimeout)
     {
       setupWifiAp();
@@ -626,5 +679,6 @@ void BlinkyMqttCubeCallback(char* topic, byte* payload, unsigned int length)
 
 void BlinkyMqttCubeWifiApButtonHandler()
 {
+  delay(50);
   BlinkyMqttCube.wifiApButtonHandler();
 }
