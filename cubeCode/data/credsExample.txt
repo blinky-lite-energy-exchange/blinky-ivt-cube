@@ -3,6 +3,6 @@
 {your.mqttbroker.com}
 {yourMqttUserName}
 {yourMqttPassword}
-{blinky-mqtt-led/01/reading}
-{blinky-mqtt-led/01/setting}
+{blinky-pico-ivt/0x/reading}
+{blinky-pico-ivt/0x/setting}
 

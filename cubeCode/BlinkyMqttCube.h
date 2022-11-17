@@ -2,12 +2,17 @@
 #include <PubSubClient.h>
 #include "LittleFS.h"
 
-struct SubscribeData
+union SubscribeData
 {
-    uint8_t command;
-    uint8_t address;
-    int16_t value;
+  struct
+  {
+      uint8_t command;
+      uint8_t address;
+      int16_t value;
+  };
+  byte buffer[4];
 };
+
 static void   BlinkyMqttCubeWifiApButtonHandler();
 static void   BlinkyMqttCubeCallback(char* topic, byte* payload, unsigned int length);
 
@@ -625,14 +630,13 @@ void BlinkyMqttCube::setChattyCathy(boolean chattyCathy)
 }
 void BlinkyMqttCube::mqttCubeCallback(char* topic, byte* payload, unsigned int length)
 {
-
   if (g_chattyCathy) Serial.print("Message arrived [");
   if (g_chattyCathy) Serial.print(topic);
   if (g_chattyCathy) Serial.print("] {command: ");
-  SubscribeData* psubscribeData = (SubscribeData*) payload;
-  g_subscribeData.command = psubscribeData->command;
-  g_subscribeData.address = psubscribeData->address;
-  g_subscribeData.value = psubscribeData->value;
+  for (int i = 0; i < length; i++) 
+  {
+    g_subscribeData.buffer[i] = payload[i];
+  }
   if (g_chattyCathy) Serial.print(g_subscribeData.command);
   if (g_chattyCathy) Serial.print(", address: ");
   if (g_chattyCathy) Serial.print(g_subscribeData.address);
